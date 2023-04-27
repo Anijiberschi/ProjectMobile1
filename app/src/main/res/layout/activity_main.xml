@@ -1,63 +1,65 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
     <!-- Add your osmdroid map view here -->
-    <org.osmdroid.views.MapView
-        android:id="@+id/mapView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
 
     <!-- Add your button view here -->
-    <Button
-        android:id="@+id/button"
-        android:layout_width="wrap_content"
-        android:layout_height="93dp"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentEnd="true"
-        android:layout_alignParentRight="true"
-        android:layout_alignParentBottom="true"
-        android:layout_marginStart="27dp"
-        android:layout_marginTop="584dp"
-        android:layout_marginEnd="27dp"
-        android:layout_marginRight="37dp"
-        android:layout_marginBottom="54dp"
-        android:text="Button" />
 
     <Button
-        android:id="@+id/circular_button"
-        android:layout_width="102dp"
-        android:layout_height="56dp"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentEnd="true"
-        android:layout_alignParentRight="true"
-        android:layout_alignParentBottom="true"
-        android:layout_marginStart="227dp"
-        android:layout_marginTop="516dp"
-        android:layout_marginEnd="82dp"
-        android:layout_marginRight="82dp"
-        android:layout_marginBottom="159dp"
+        android:id="@+id/btScanner"
+        android:layout_width="409dp"
+        android:layout_height="72dp"
+        android:layout_marginBottom="4dp"
+        android:text="Scanner"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.493"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <Button
+        android:id="@+id/btAddMarker"
+        android:layout_width="91dp"
+        android:layout_height="81dp"
+        android:layout_marginBottom="40dp"
         android:background="@drawable/circular_button_bg"
-        android:text="Button" />
+        android:text="+"
+        app:layout_constraintBottom_toTopOf="@+id/btScanner"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.883"
+        app:layout_constraintStart_toStartOf="parent" />
 
     <Button
-        android:id="@+id/circular_button2"
-        android:layout_width="104dp"
-        android:layout_height="49dp"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentEnd="true"
-        android:layout_alignParentRight="true"
-        android:layout_alignParentBottom="true"
-        android:layout_marginStart="32dp"
-        android:layout_marginTop="524dp"
-        android:layout_marginEnd="275dp"
-        android:layout_marginRight="275dp"
-        android:layout_marginBottom="157dp"
+        android:id="@+id/bt_goToLoginActivity"
+        android:layout_width="91dp"
+        android:layout_height="81dp"
+        android:layout_marginBottom="40dp"
         android:background="@drawable/circular_button_bg"
-        android:text="Button" />
+        android:text="Login"
+        app:layout_constraintBottom_toTopOf="@+id/btScanner"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.084"
+        app:layout_constraintStart_toStartOf="parent" />
 
-</RelativeLayout>
+    <LinearLayout
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <org.osmdroid.views.MapView
+            android:id="@+id/map"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent">
+
+        </org.osmdroid.views.MapView>
+    </LinearLayout>
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>
