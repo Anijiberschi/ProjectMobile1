@@ -1,5 +1,7 @@
 package com.example.projectmobile1;
 
+import static android.content.ContentValues.TAG;
+
 import android.Manifest;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -7,14 +9,20 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Geocoder;
+import android.location.Location;
+import android.location.LocationManager;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.util.Log;
+import android.view.Display;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
+import android.widget.GridLayout;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -29,11 +37,18 @@ import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.ItemizedIconOverlay;
 import org.osmdroid.views.overlay.Marker;
 import org.osmdroid.views.overlay.OverlayItem;
+import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 import com.journeyapps.barcodescanner.ScanContract;
 import com.journeyapps.barcodescanner.ScanOptions;
 
@@ -51,90 +66,53 @@ public class MainActivity extends AppCompatActivity  {
     private MapView map = null;
     private List<MarkerData> markerDataList = new ArrayList<>();
     private DatabaseReference databaseReference;
+    private GridLayout gridLayout;
+    private FirebaseDatabaseManager firebaseDatabaseManager;
+    DatabaseReference markersRef;
+    private static final int NUM_COLUMNS = 15; // Example value, adjust according to your grid layout
+    private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
+    private FusedLocationProviderClient fusedLocationClient;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        btScanner = findViewById(R.id.btScanner);
+        btLogin = findViewById(R.id.bt_goToLoginActivity);
+        btAddMarker = findViewById(R.id.btAddMarker);
+        map = (MapView) findViewById(R.id.map);
+        Marker marker = new Marker(map);
+        MyLocationNewOverlay myLocationNewOverlay = new MyLocationNewOverlay(map);
+        myLocationNewOverlay.enableMyLocation();
+        map.getOverlays().add(myLocationNewOverlay);
+        markersRef = FirebaseDatabase.getInstance().getReference("markers");
+
+
+
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+
         String permissions[] = new String []{
                 Manifest.permission.ACCESS_FINE_LOCATION,
                 Manifest.permission.WRITE_EXTERNAL_STORAGE
         };
 
-        btScanner = findViewById(R.id.btScanner);
-        btLogin = findViewById(R.id.bt_goToLoginActivity);
+        Button addMarkerButton = findViewById(R.id.btAddMarker);
 
-        btLogin.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent intent = new Intent(MainActivity.this, LoginActivity.class);
-                startActivity(intent);
-            }
-        });
+        if (currentUser != null ) {
+            addMarkerButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    // Get the user's current location
+                    GeoPoint userLocation = myLocationNewOverlay.getMyLocation();
 
-        btScanner.setOnClickListener(view ->
-        {
-            scanCode();
-        });
-
-        Context ctx = getApplicationContext();
-        Configuration.getInstance().load(ctx, PreferenceManager.getDefaultSharedPreferences(ctx));
-
-
-
-        map = (MapView) findViewById(R.id.map);
-
-        Marker marker = new Marker(map);
-
-        marker.setPosition(new GeoPoint(50.818048, 4.395909));
-        marker.setTitle("HELB");
-
-// Add the marker to the map
-        map.getOverlays().add(marker);
-
-// Refresh the map
-        map.invalidate();
-
-
-        map.getZoomController().setVisibility(CustomZoomButtonsController.Visibility.ALWAYS);
-        map.setMultiTouchControls(true);
-        map.setTileSource(TileSourceFactory.MAPNIK);
-
-        MapController mapController = (MapController) map.getController();
-        mapController.setZoom(18);
-
-
-
-
-        GeoPoint geoPoint = new GeoPoint(50.81822811183402,4.396181149208416);
-        mapController.setCenter(geoPoint);
-
-        requestPermissionsIfNecessary(permissions);
-
-        btAddMarker = findViewById(R.id.btAddMarker);
-        btAddMarker.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                // Set an OnMapClickListener for your map
-                FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-                if (user == null)
-                {
-                    Toast.makeText(MainActivity.this, "Please log in to use this feature", Toast.LENGTH_SHORT).show();
-                }else {
-                map.getOverlays().add(new ItemizedIconOverlay<OverlayItem>(
-                        MainActivity.this, new ArrayList<OverlayItem>(), null) {
-                    @Override
-                    public boolean onSingleTapConfirmed(final MotionEvent event, final MapView mapView) {
-                        // Get the clicked location's coordinates
-                        GeoPoint clickedGeoPoint = (GeoPoint) mapView.getProjection().fromPixels((int) event.getX(), (int) event.getY());
-
+                    if (userLocation != null) {
                         // Reverse geocode the coordinates to get a human-readable address
                         Geocoder geocoder = new Geocoder(MainActivity.this, Locale.getDefault());
                         List<Address> addresses = null;
                         String markerTitle = "New Marker";
                         try {
-                            addresses = geocoder.getFromLocation(clickedGeoPoint.getLatitude(), clickedGeoPoint.getLongitude(), 1);
+                            addresses = geocoder.getFromLocation(userLocation.getLatitude(), userLocation.getLongitude(), 1);
                             if (addresses != null && addresses.size() > 0) {
                                 Address address = addresses.get(0);
                                 StringBuilder sb = new StringBuilder();
@@ -149,59 +127,92 @@ public class MainActivity extends AppCompatActivity  {
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
+                        MarkerData marker = new MarkerData(markerTitle, userLocation.getLatitude(), userLocation.getLongitude(), currentUser.getEmail());
 
-                        // Generate a unique code for the marker to access the grid
-                        String markerCode = UUID.randomUUID().toString();
-                        String id = UUID.randomUUID().toString();
-                        String pixelGridId = UUID.randomUUID().toString();
-
-                        // Create a new Marker object with the clicked location's coordinates and desired properties
-                        PixelGrid markerPixelGrid = new PixelGrid();
-                        DatabaseReference pixelGridRef = FirebaseDatabase.getInstance().getReference("pixelGrids").child(pixelGridId);
-                        pixelGridRef.setValue(markerPixelGrid);
-
-                        MarkerData newMarkerData = new MarkerData(id, markerTitle, clickedGeoPoint.getLatitude(),clickedGeoPoint.getLongitude(), pixelGridId, markerCode);
-
-                        // Add the new Marker object to your list of markers
-                        markerDataList.add(newMarkerData);
-                        DatabaseReference markerRef = FirebaseDatabase.getInstance().getReference("markers").child(id);
-                        markerRef.setValue(newMarkerData);
-
-                        // Create a new OverlayItem with the marker's title and location
-                        OverlayItem overlayItem = new OverlayItem(markerTitle, "", clickedGeoPoint);
-
-//                        ItemizedIconOverlay<OverlayItem> markerOverlay = new ItemizedIconOverlay<>(this, OverlayItem, null);
-//                        markerOverlay.addItem(overlayItem);
-//                        map.getOverlays().add(markerOverlay);
-
-                        // Notify the ItemizedIconOverlay that the data has changed
-                        populate();
-
+                        // Add the marker to Firebase
                         DatabaseReference markersRef = FirebaseDatabase.getInstance().getReference("markers");
-                        DatabaseReference newMarkerRef = markersRef.child(id);
-                        newMarkerRef.setValue(newMarkerData);
+                        markersRef.push().setValue(marker)
+                                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                    @Override
+                                    public void onSuccess(Void aVoid) {
+                                        Toast.makeText(MainActivity.this, "Marker added to Firebase", Toast.LENGTH_SHORT).show();
+                                    }
+                                })
+                                .addOnFailureListener(new OnFailureListener() {
+                                    @Override
+                                    public void onFailure(@NonNull Exception e) {
+                                        Toast.makeText(MainActivity.this, "Failed to add marker to Firebase", Toast.LENGTH_SHORT).show();
+                                    }
+                                });
 
-                        DatabaseReference newPixelGridRef = pixelGridRef.child(markerCode);
-                        newPixelGridRef.setValue(markerPixelGrid);
-
-                        return true;
                     }
-                });
-            }
-        }});
-        map.getOverlays().add(new ItemizedIconOverlay<>(this, new ArrayList<OverlayItem>(), null));
+                }
+            });
+        }else if (currentUser == null)
+        {
+            addMarkerButton.setOnClickListener(new View.OnClickListener()
+            {
+                public void onClick(View v){
+                    NotConnectedAlertBox();
+                }
+            });
+
+        }
+
+
+
+
+        btScanner.setOnClickListener(view ->
+        {
+            scanCode();
+        });
+
+        LoginOrLogout(currentUser, btLogin);
+
+
+        AddMarkerHELB(map, marker);
+        CenteratHelb(map);
+        requestPermissionsIfNecessary(permissions);
+        retrieveMarkers();
+
+
+
+
     }
 
-    public void writeToFirebase(DatabaseReference databaseReference, MarkerData markerData) {
-        DatabaseReference markerRef = databaseReference.child("markers").push();
-        markerRef.child("title").setValue(markerData.getTitle());
-        markerRef.child("latitude").setValue(markerData.getLatitude());
-        markerRef.child("longitude").setValue(markerData.getLongitude());
-        markerRef.child("markerCode").setValue(markerData.getCode());
+    public void NotConnectedAlertBox()
+    {
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
 
-        //gridList = marker.getPixelGridId().getGrid();
-        //markerRef.child("grid").setValue(gridList);
+        // Set the message show for the Alert time
+        builder.setMessage("You have to be connected to use this feature. Do you want to sign up ?");
+
+
+        // Set Alert Title
+        builder.setTitle("Not Logged !");
+
+        // Set Cancelable false for when the user clicks on the outside the Dialog Box then it will remain show
+        builder.setCancelable(true);
+
+        // Set the positive button with yes name Lambda OnClickListener method is use of DialogInterface interface.
+        builder.setPositiveButton("Yes", (DialogInterface.OnClickListener) (dialog, which) -> {
+            // When the user click yes button then app will close
+            Intent intent = new Intent(MainActivity.this, LoginActivity.class);
+            startActivity(intent);
+        });
+
+        // Set the Negative button with No name Lambda OnClickListener method is use of DialogInterface interface.
+        builder.setNegativeButton("No", (DialogInterface.OnClickListener) (dialog, which) -> {
+            // If user click no then dialog box is canceled.
+            dialog.cancel();
+        });
+
+        // Create the Alert dialog
+        AlertDialog alertDialog = builder.create();
+        // Show the Alert Dialog box
+        alertDialog.show();
     }
+
 
     @Override
     public void onResume() {
@@ -211,6 +222,8 @@ public class MainActivity extends AppCompatActivity  {
         //SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         //Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this));
         map.onResume(); //needed for compass, my location overlays, v6.0.0 and up
+
+
     }
 
     @Override
@@ -265,6 +278,33 @@ public class MainActivity extends AppCompatActivity  {
         barLaucher.launch(options);
     }
 
+    private void LoginOrLogout (FirebaseUser currentUser, Button login)
+    {
+        if(currentUser != null){
+            login.setText("Logout");
+            login.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    Toast.makeText(MainActivity.this, "Logout", Toast.LENGTH_SHORT).show();
+                    FirebaseAuth.getInstance().signOut();
+                    Intent intent = getIntent();
+                    finish();
+                    startActivity(intent);
+                }
+            });
+        }else
+        {
+            login.setText("Login");
+            login.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    Intent intent = new Intent(MainActivity.this, LoginActivity.class);
+                    startActivity(intent);
+                }
+            });
+        }
+    }
+
     ActivityResultLauncher<ScanOptions> barLaucher = registerForActivityResult(new ScanContract(),result ->
     {
         if (result.getContents() != null)
@@ -278,5 +318,69 @@ public class MainActivity extends AppCompatActivity  {
             startActivity(intent);
         }}
     });
+
+
+    private void AddMarkerHELB (MapView map, Marker marker)
+    {
+        Context ctx = getApplicationContext();
+        Configuration.getInstance().load(ctx, PreferenceManager.getDefaultSharedPreferences(ctx));
+        marker.setPosition(new GeoPoint(50.818048, 4.395909));
+        marker.setTitle("HELB");
+
+// Add the marker to the map
+        map.getOverlays().add(marker);
+        map.invalidate();
+    }
+
+    private void CenteratHelb(MapView map){
+        map.getZoomController().setVisibility(CustomZoomButtonsController.Visibility.ALWAYS);
+        map.setMultiTouchControls(true);
+        map.setTileSource(TileSourceFactory.MAPNIK);
+
+        MapController mapController = (MapController) map.getController();
+        mapController.setZoom(18);
+
+        GeoPoint geoPoint = new GeoPoint(50.81822811183402,4.396181149208416);
+        mapController.setCenter(geoPoint);
+    }
+
+    private void updateCellUI(GridCell cell) {
+        // Get the reference to the corresponding view in the grid layout based on cell's row and column
+        View cellView = gridLayout.getChildAt(cell.getRow() * NUM_COLUMNS + cell.getColumn());
+
+        // Update the background color of the cell view based on the cell's state
+        int backgroundColor = ContextCompat.getColor(cellView.getContext(), cell.isState() ? R.color.black : R.color.white);
+
+    }
+    private void retrieveMarkers() {
+        markersRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+
+
+                // Iterate over the dataSnapshot to get each marker
+                for (DataSnapshot markerSnapshot : dataSnapshot.getChildren()) {
+                    // Retrieve the marker object
+                    Marker marker = new Marker(map);
+
+                    double latitude = markerSnapshot.child("latitude").getValue(Double.class);
+                    double longitude = markerSnapshot.child("longitude").getValue(Double.class);
+                    String title = markerSnapshot.child("title").getValue(String.class);
+
+                    marker.setPosition(new GeoPoint(latitude, longitude));
+                    marker.setTitle(title);
+
+                    map.getOverlays().add(marker);
+                }
+
+                map.invalidate();
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.e(TAG, "Failed to retrieve markers: " + databaseError.getMessage());
+            }
+        });
+    }
 
 }
