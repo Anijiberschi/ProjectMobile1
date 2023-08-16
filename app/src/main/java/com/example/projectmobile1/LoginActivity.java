@@ -1,14 +1,14 @@
 package com.example.projectmobile1;
 
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
@@ -19,8 +19,9 @@ import com.google.firebase.auth.FirebaseUser;
 public class LoginActivity extends AppCompatActivity {
 
     private EditText email, password;
-    private Button login, register ;
+    private Button login, register;
     private  FirebaseAuth mAuth;
+    private FirebaseUser currentUser;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -30,11 +31,13 @@ public class LoginActivity extends AppCompatActivity {
 
 
         mAuth = FirebaseAuth.getInstance();
+        currentUser = mAuth.getCurrentUser();
 
         register = findViewById(R.id.bt_goToRegisterActivity);
         email = findViewById(R.id.et_emailLoginActivity);
         password = findViewById(R.id.et_passwordLoginActivity);
         login = findViewById(R.id.bt_logginInLoginActivity);
+
 
 
         register.setOnClickListener(new View.OnClickListener() {
@@ -76,7 +79,7 @@ public class LoginActivity extends AppCompatActivity {
     public void onStart() {
         super.onStart();
         // Check if user is signed in (non-null) and update UI accordingly.
-        FirebaseUser currentUser = mAuth.getCurrentUser();
+
         if(currentUser != null){
             Toast.makeText(LoginActivity.this, "You're already connected", Toast.LENGTH_SHORT ).show();
         }

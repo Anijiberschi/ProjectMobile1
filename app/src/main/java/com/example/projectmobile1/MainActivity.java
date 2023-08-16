@@ -9,16 +9,11 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Geocoder;
-import android.location.Location;
-import android.location.LocationManager;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.util.Log;
-import android.view.Display;
-import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
-import android.widget.GridLayout;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -27,17 +22,6 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-
-import org.osmdroid.config.Configuration;
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
-import org.osmdroid.util.GeoPoint;
-import org.osmdroid.views.CustomZoomButtonsController;
-import org.osmdroid.views.MapController;
-import org.osmdroid.views.MapView;
-import org.osmdroid.views.overlay.ItemizedIconOverlay;
-import org.osmdroid.views.overlay.Marker;
-import org.osmdroid.views.overlay.OverlayItem;
-import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.tasks.OnFailureListener;
@@ -52,26 +36,36 @@ import com.google.firebase.database.ValueEventListener;
 import com.journeyapps.barcodescanner.ScanContract;
 import com.journeyapps.barcodescanner.ScanOptions;
 
+import org.osmdroid.config.Configuration;
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
+import org.osmdroid.util.GeoPoint;
+import org.osmdroid.views.CustomZoomButtonsController;
+import org.osmdroid.views.MapController;
+import org.osmdroid.views.MapView;
+import org.osmdroid.views.overlay.Marker;
+import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity  {
     private final int REQUEST_PERMISSIONS_REQUEST_CODE = 1;
     private Button btScanner;
     private Button btLogin;
     private Button btAddMarker;
+    private Button btChat;
     private MapView map = null;
-    private List<MarkerData> markerDataList = new ArrayList<>();
-    private DatabaseReference databaseReference;
-    private GridLayout gridLayout;
-    private FirebaseDatabaseManager firebaseDatabaseManager;
-    DatabaseReference markersRef;
+    private DatabaseReference  markersRef;
     private static final int NUM_COLUMNS = 15; // Example value, adjust according to your grid layout
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
     private FusedLocationProviderClient fusedLocationClient;
+
+    private String subject="Your qr code";
+    private String message;
+
+    private EmailSender emailSender;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -81,16 +75,29 @@ public class MainActivity extends AppCompatActivity  {
         btScanner = findViewById(R.id.btScanner);
         btLogin = findViewById(R.id.bt_goToLoginActivity);
         btAddMarker = findViewById(R.id.btAddMarker);
+        btChat = findViewById(R.id.bt_toChat);
         map = (MapView) findViewById(R.id.map);
+
         Marker marker = new Marker(map);
         MyLocationNewOverlay myLocationNewOverlay = new MyLocationNewOverlay(map);
         myLocationNewOverlay.enableMyLocation();
         map.getOverlays().add(myLocationNewOverlay);
         markersRef = FirebaseDatabase.getInstance().getReference("markers");
-
-
-
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+
+
+        LoginOrProfile(currentUser, btLogin);
+
+        btChat.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(MainActivity.this, ChatActivity.class);
+                startActivity(intent);
+            }
+        });
+
+
+
 
         String permissions[] = new String []{
                 Manifest.permission.ACCESS_FINE_LOCATION,
@@ -127,15 +134,21 @@ public class MainActivity extends AppCompatActivity  {
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
-                        MarkerData marker = new MarkerData(markerTitle, userLocation.getLatitude(), userLocation.getLongitude(), currentUser.getEmail());
+
+                        MarkerData marker = new MarkerData(markerTitle, userLocation.getLatitude(), userLocation.getLongitude(),currentUser.getUid());
+
 
                         // Add the marker to Firebase
+
                         DatabaseReference markersRef = FirebaseDatabase.getInstance().getReference("markers");
+
+                        emailSender = new EmailSender(currentUser.getEmail().toString(),subject,markersRef.push().getKey());
                         markersRef.push().setValue(marker)
                                 .addOnSuccessListener(new OnSuccessListener<Void>() {
                                     @Override
                                     public void onSuccess(Void aVoid) {
-                                        Toast.makeText(MainActivity.this, "Marker added to Firebase", Toast.LENGTH_SHORT).show();
+                                        emailSender.execute();
+                                        Toast.makeText(MainActivity.this, "Marker added to Firebase and QR code sent.", Toast.LENGTH_SHORT).show();
                                     }
                                 })
                                 .addOnFailureListener(new OnFailureListener() {
@@ -167,7 +180,7 @@ public class MainActivity extends AppCompatActivity  {
             scanCode();
         });
 
-        LoginOrLogout(currentUser, btLogin);
+        //LoginOrLogout(currentUser, btLogin);
 
 
         AddMarkerHELB(map, marker);
@@ -278,17 +291,14 @@ public class MainActivity extends AppCompatActivity  {
         barLaucher.launch(options);
     }
 
-    private void LoginOrLogout (FirebaseUser currentUser, Button login)
+    private void LoginOrProfile (FirebaseUser currentUser, Button login)
     {
         if(currentUser != null){
-            login.setText("Logout");
+            login.setText("Profile");
             login.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    Toast.makeText(MainActivity.this, "Logout", Toast.LENGTH_SHORT).show();
-                    FirebaseAuth.getInstance().signOut();
-                    Intent intent = getIntent();
-                    finish();
+                    Intent intent = new Intent(MainActivity.this, Profile.class);
                     startActivity(intent);
                 }
             });
@@ -309,14 +319,30 @@ public class MainActivity extends AppCompatActivity  {
     {
         if (result.getContents() != null)
         {
-            FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-            if (user == null)
-            {
-                Toast.makeText(MainActivity.this, "Please log in to use this feature", Toast.LENGTH_SHORT).show();
-            }else {
-            Intent intent = new Intent(this, LoginActivity.class); // Replace RedirectActivity with your desired activity class
-            startActivity(intent);
-        }}
+            String uidOfMarker = result.getContents();
+
+            DatabaseReference markerRef = FirebaseDatabase.getInstance().getReference().child("markers").child(uidOfMarker);
+
+            markerRef.addValueEventListener(new ValueEventListener() {
+                @Override
+                public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                    if (dataSnapshot.exists()) {
+                        // The scanned QR code is a valid UID and corresponds to a marker
+                        Intent intent = new Intent(MainActivity.this, GridActivity.class);
+                        intent.putExtra("user_uid", uidOfMarker);
+                        startActivity(intent);
+                    } else {
+                        // The scanned QR code is not a valid UID or does not correspond to a marker
+                        Toast.makeText(MainActivity.this, "Invalid QR code = "+ uidOfMarker, Toast.LENGTH_SHORT).show();
+                    }
+                }
+
+                @Override
+                public void onCancelled(@NonNull DatabaseError databaseError) {
+                    // Handle the error case if necessary
+                }
+            });
+        }
     });
 
 
@@ -344,14 +370,7 @@ public class MainActivity extends AppCompatActivity  {
         mapController.setCenter(geoPoint);
     }
 
-    private void updateCellUI(GridCell cell) {
-        // Get the reference to the corresponding view in the grid layout based on cell's row and column
-        View cellView = gridLayout.getChildAt(cell.getRow() * NUM_COLUMNS + cell.getColumn());
 
-        // Update the background color of the cell view based on the cell's state
-        int backgroundColor = ContextCompat.getColor(cellView.getContext(), cell.isState() ? R.color.black : R.color.white);
-
-    }
     private void retrieveMarkers() {
         markersRef.addValueEventListener(new ValueEventListener() {
             @Override

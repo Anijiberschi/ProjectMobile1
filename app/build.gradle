@@ -20,6 +20,13 @@ android {
     namespace 'com.example.projectmobile1'
     compileSdk 33
 
+    packagingOptions {
+        resources {
+            exclude 'META-INF/NOTICE.md'
+            exclude 'META-INF/LICENSE.md'
+        }
+    }
+
     defaultConfig {
         applicationId "com.example.projectmobile1"
         minSdk 28
@@ -43,7 +50,9 @@ android {
 }
 
 dependencies {
-
+    implementation 'com.sun.mail:android-mail:1.6.6'
+    implementation 'com.sun.mail:android-activation:1.6.6'
+    implementation 'com.android.volley:volley:1.2.0'
     implementation 'com.google.android.gms:play-services-location:18.0.0'
     implementation 'com.google.zxing:core:3.4.1'
     implementation 'org.osmdroid:osmdroid-android:6.1.16'

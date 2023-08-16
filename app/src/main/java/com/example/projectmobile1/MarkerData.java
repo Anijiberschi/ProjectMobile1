@@ -1,19 +1,42 @@
 package com.example.projectmobile1;
 
-import com.google.android.gms.maps.model.LatLng;
-
 public class MarkerData {
 
-    private String title;
-    private String UserId;
+    private String title, uid, colors="";
     private double latitude;
     private double longitude;
+    private final int sizeOfTheSquare = 5;
 
-    public MarkerData(String title, double latitude, double longitude, String UserId) {
+    public String getUid() {
+        return uid;
+    }
+
+    public void setUid(String uid) {
+        this.uid = uid;
+    }
+
+    public String getColors() {
+        return colors;
+    }
+
+    public void setColors(String colors) {
+        this.colors = colors;
+    }
+
+    public int getSizeOfTheSquare() {
+        return sizeOfTheSquare;
+    }
+
+    public MarkerData(String title, double latitude, double longitude, String uid) {
         this.title = title;
         this.latitude = latitude;
         this.longitude = longitude;
-        this.UserId = UserId;
+        this.uid = uid;
+
+        for (int i = 0 ; i < sizeOfTheSquare*sizeOfTheSquare; i++)
+        {
+            colors += "b";
+        }
     }
 
     public MarkerData() {

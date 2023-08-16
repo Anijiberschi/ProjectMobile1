@@ -1,22 +1,22 @@
 package com.example.projectmobile1;
 
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.content.Intent;
 import android.os.Bundle;
-import android.text.TextUtils;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.FirebaseDatabase;
+
+import java.util.Random;
 
 public class RegisterActivity extends AppCompatActivity {
 
@@ -33,6 +33,7 @@ public class RegisterActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_register);
 
+
         name = findViewById(R.id.et_nameRegister);
         email = findViewById(R.id.et_emailRegister);
         password = findViewById(R.id.et_passwordRegister);
@@ -47,7 +48,7 @@ public class RegisterActivity extends AppCompatActivity {
                 String str_name = name.getText().toString();
                 String str_email = email.getText().toString();
                 String str_password = password.getText().toString();
-                String str_description = description.getText().toString();
+                String str_description = getRandomWordFromString(description.getText().toString()); // take one element
 
 
                 //TODO: affiner cette partie
@@ -61,6 +62,7 @@ public class RegisterActivity extends AppCompatActivity {
                             @Override
                             public void onComplete(@NonNull Task<AuthResult> task) {
                                 if (task.isSuccessful()){
+
                                     User user = new User (str_name,str_email,str_description);
 
                                     FirebaseDatabase.getInstance().getReference("Users")
@@ -81,10 +83,22 @@ public class RegisterActivity extends AppCompatActivity {
 
                                             });
                                 }
+                                else {
+                                    Toast.makeText(RegisterActivity.this, task.getException().getMessage(), Toast.LENGTH_SHORT).show();
+                                }
                             }
                         });
             }
         });
-
     }
+
+    public String getRandomWordFromString(String sentence) {
+        String[] words = sentence.split(" ");
+        if (words.length > 0) {
+            Random random = new Random();
+            int randomIndex = random.nextInt(words.length);
+            return words[randomIndex];
+        }
+        return null; // Empty string or no words found
+}
 }
