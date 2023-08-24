@@ -1,6 +1,6 @@
 package com.example.projectmobile1;
 
-import android.annotation.SuppressLint;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.GridLayout;
@@ -21,9 +21,10 @@ public class GridActivity extends AppCompatActivity {
     private int[][] gridColors = new int[5][5];
     private GridLayout gridView;
     private DatabaseReference markerRef;
+    private MarkerData marker;
     private String uidOfMarker;
+    int sizeSquare;
 
-    @SuppressLint("WrongViewCast")
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -33,6 +34,8 @@ public class GridActivity extends AppCompatActivity {
 
         uidOfMarker = getIntent().getStringExtra("user_uid");
         markerRef = FirebaseDatabase.getInstance().getReference().child("markers").child(uidOfMarker);
+        marker = new MarkerData();
+        sizeSquare = marker.getSizeOfTheSquare();
 
         markerRef.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
@@ -40,9 +43,7 @@ public class GridActivity extends AppCompatActivity {
                 if (dataSnapshot.exists()) {
                     String colors = dataSnapshot.child("colors").getValue(String.class);
                     if (colors != null && colors.length() == 25) {
-                        for (int i = 0; i < 25; i++) {
-                            gridColors[i / 5][i % 5] = (colors.charAt(i) == 'b') ? 0 : 1;
-                        }
+                        parseColorsString(colors);
                         setupGridView();
                     }
                 }
@@ -55,35 +56,40 @@ public class GridActivity extends AppCompatActivity {
         });
     }
 
+    private void parseColorsString(String colors) {
+        for (int i = 0; i < sizeSquare*sizeSquare; i++) {
+            gridColors[i / sizeSquare][i % sizeSquare] = (colors.charAt(i) == 'b') ? 0 : 1;
+        }
+    }
+
     private void setupGridView() {
-        for (int i = 0; i < 5; i++) {
-            for (int j = 0; j < 5; j++) {
+
+        for (int i = 0; i < sizeSquare; i++) {
+            for (int j = 0; j < sizeSquare; j++) {
                 final TextView textView = new TextView(this);
                 textView.setTextSize(18);
                 textView.setPadding(1, 1, 1, 1);
 
-                // Apply the custom cell background drawable
                 textView.setBackgroundResource(R.drawable.white_cell_drawable);
 
-                int color = gridColors[i][j] == 0 ? android.R.color.black : android.R.color.white;
-                textView.setBackgroundColor(ContextCompat.getColor(this, color));
+                int colorResId = gridColors[i][j] == 0 ? android.R.color.black : android.R.color.white;
+                textView.setBackgroundColor(ContextCompat.getColor(this, colorResId));
 
                 textView.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        int row = gridView.indexOfChild(textView) / 5;
-                        int col = gridView.indexOfChild(textView) % 5;
+                        int row = gridView.indexOfChild(textView) / sizeSquare;
+                        int col = gridView.indexOfChild(textView) % sizeSquare;
                         gridColors[row][col] = (gridColors[row][col] == 0) ? 1 : 0;
-                        int newColor = gridColors[row][col] == 0 ? android.R.color.black : android.R.color.white;
-                        textView.setBackgroundColor(ContextCompat.getColor(GridActivity.this, newColor));
+                        int newColorResId = gridColors[row][col] == 0 ? android.R.color.black : android.R.color.white;
+                        textView.setBackgroundColor(ContextCompat.getColor(GridActivity.this, newColorResId));
 
                         updateColorsStringAndFirebase();
 
-
-
+                        Intent intent = new Intent(GridActivity.this, MainActivity.class);
+                        startActivity(intent);
                     }
                 });
-
 
                 GridLayout.LayoutParams params = new GridLayout.LayoutParams();
                 params.rowSpec = GridLayout.spec(i, 1, 1f);
@@ -94,17 +100,17 @@ public class GridActivity extends AppCompatActivity {
             }
         }
     }
+
+
     private void updateColorsStringAndFirebase() {
         StringBuilder colorsBuilder = new StringBuilder();
-        for (int i = 0; i < 5; i++) {
-            for (int j = 0; j < 5; j++) {
+        for (int i = 0; i < sizeSquare; i++) {
+            for (int j = 0; j < sizeSquare; j++) {
                 colorsBuilder.append(gridColors[i][j] == 0 ? 'b' : 'w');
             }
         }
         String newColors = colorsBuilder.toString();
 
-        // Update colors string on Firebase
         markerRef.child("colors").setValue(newColors);
-
     }
 }

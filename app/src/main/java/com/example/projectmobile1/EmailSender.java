@@ -24,13 +24,12 @@ import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
 
-public class EmailSender extends AsyncTask<Void, Void, Bitmap> {
+public class EmailSender extends AsyncTask<Void, Void, Void> {
     private final String senderEmail = "projectmobile085@gmail.com";
-    private final String senderPassword = "apnzxbylwuxpjftd"; // Big lack of security
+    private final String senderPassword = "apnzxbylwuxpjftd"; // A big lack of security, consider using secure methods
     private final String recipientEmail;
     private final String subject;
     private final String messageContent;
-    String content;
 
     public EmailSender(String recipientEmail, String subject, String messageContent) {
         this.recipientEmail = recipientEmail;
@@ -39,53 +38,45 @@ public class EmailSender extends AsyncTask<Void, Void, Bitmap> {
     }
 
     @Override
-    protected Bitmap doInBackground(Void... params) {
+    protected Void doInBackground(Void... params) {
         try {
-            // Generate the QR code image
             Bitmap qrCodeBitmap = generateQRCode(messageContent);
 
-            // Convert the QR code image to a byte array
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
             qrCodeBitmap.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream);
             byte[] qrCodeBytes = byteArrayOutputStream.toByteArray();
 
-            // Configure email properties
-            Properties props = new Properties();
-            props.put("mail.smtp.auth", "true");
-            props.put("mail.smtp.starttls.enable", "true");
-            props.put("mail.smtp.host", "smtp.gmail.com");
-            props.put("mail.smtp.port", "587");
+            Properties mailProperties = new Properties();
+            mailProperties.put("mail.smtp.auth", "true");
+            mailProperties.put("mail.smtp.starttls.enable", "true");
+            mailProperties.put("mail.smtp.host", "smtp.gmail.com");
+            mailProperties.put("mail.smtp.port", "587");
 
-            Session session = Session.getInstance(props,
-                    new javax.mail.Authenticator() {
-                        protected PasswordAuthentication getPasswordAuthentication() {
-                            return new PasswordAuthentication(senderEmail, senderPassword);
-                        }
-                    });
+            Session mailSession = Session.getInstance(mailProperties, new javax.mail.Authenticator() {
+                protected PasswordAuthentication getPasswordAuthentication() {
+                    return new PasswordAuthentication(senderEmail, senderPassword);
+                }
+            });
 
-            // Create the email message
-            MimeMessage message = new MimeMessage(session);
-            message.setFrom(new InternetAddress(senderEmail));
-            message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(recipientEmail));
-            message.setSubject(subject);
+            MimeMessage emailMessage = new MimeMessage(mailSession);
+            emailMessage.setFrom(new InternetAddress(senderEmail));
+            emailMessage.setRecipients(Message.RecipientType.TO, InternetAddress.parse(recipientEmail));
+            emailMessage.setSubject(subject);
 
-            // Create the message body with the QR code image as an attachment
-            MimeBodyPart messageBodyPart = new MimeBodyPart();
-            messageBodyPart.setText(messageContent);
+            MimeBodyPart textBodyPart = new MimeBodyPart();
+            textBodyPart.setText(messageContent);
 
             Multipart multipart = new MimeMultipart();
-            multipart.addBodyPart(messageBodyPart);
+            multipart.addBodyPart(textBodyPart);
 
-            // Attach the QR code image to the email
             MimeBodyPart attachmentPart = new MimeBodyPart();
             attachmentPart.setFileName("qr_code.png");
             attachmentPart.setContent(qrCodeBytes, "image/png");
             multipart.addBodyPart(attachmentPart);
 
-            message.setContent(multipart);
+            emailMessage.setContent(multipart);
 
-            // Send the email
-            Transport.send(message);
+            Transport.send(emailMessage);
 
             Log.i("EmailSender", "Email sent successfully!");
 
@@ -95,7 +86,8 @@ public class EmailSender extends AsyncTask<Void, Void, Bitmap> {
         }
 
         return null;
-}
+    }
+
     private Bitmap generateQRCode(String content) {
         QRCodeWriter qrCodeWriter = new QRCodeWriter();
         try {

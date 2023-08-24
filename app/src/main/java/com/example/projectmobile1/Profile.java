@@ -46,9 +46,8 @@ public class Profile extends AppCompatActivity {
     private TextView txtName, txtCommentary;
     private ImageView imageView;
     private RequestQueue requestQueue;
-    String imageUrl = "https://picsum.photos/seed/";
+    private String imageUrl = "https://picsum.photos/seed/";
     private Button bt_logout;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,7 +61,6 @@ public class Profile extends AppCompatActivity {
 
         userMessages = new ArrayList<>();
         chatAdapter = new ChatAdapter(userMessages);
-
 
         txtName = findViewById(R.id.txtName);
         txtCommentary = findViewById(R.id.txtCommentary);
@@ -87,10 +85,8 @@ public class Profile extends AppCompatActivity {
             }
         });
 
-
         messagesRef = FirebaseDatabase.getInstance().getReference("messages");
 
-        // Listen for new messages
         messagesRef.orderByChild("sender").equalTo(sender).addChildEventListener(new ChildEventListener() {
             @Override
             public void onChildAdded(DataSnapshot dataSnapshot, String previousChildKey) {
@@ -98,32 +94,23 @@ public class Profile extends AppCompatActivity {
                 if (chatMessage != null && chatMessage.getSender().equals(sender)) {
                     userMessages.add(chatMessage);
                     chatAdapter.notifyDataSetChanged();
-
                 }
             }
 
             @Override
-            public void onChildChanged(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {
-
-            }
+            public void onChildChanged(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {}
 
             @Override
-            public void onChildRemoved(@NonNull DataSnapshot snapshot) {
-
-            }
+            public void onChildRemoved(@NonNull DataSnapshot snapshot) {}
 
             @Override
-            public void onChildMoved(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {
-
-            }
+            public void onChildMoved(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {}
 
             @Override
-            public void onCancelled(@NonNull DatabaseError error) {
+            public void onCancelled(@NonNull DatabaseError error) {}
+        });
 
-            }});
-
-
-            userValueEventListener = new ValueEventListener() {
+        userValueEventListener = new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 Log.d("Firebase Data", "Data changed");
@@ -131,35 +118,24 @@ public class Profile extends AppCompatActivity {
                     User user = dataSnapshot.getValue(User.class);
                     if (user != null) {
                         Log.d("Firebase User", "User: " + user.toString());
-                        // Display the user's name
                         String name = user.getName();
                         txtName.setText(name);
-
-                        // Display the user's commentary
                         String description = user.getDescription();
                         txtCommentary.setText(description);
-
-                        //Display the profile picture.
                         String profilePicture = imageUrl + description + "/300/300";
                         loadImageFromUrl(profilePicture);
-                    }else {
+                    } else {
                         Log.d("Firebase User", "User is null");
                     }
                 } else {
                     Log.d("Firebase Data", "Snapshot does not exist");
-            }
+                }
             }
 
             @Override
             public void onCancelled(DatabaseError databaseError) {
                 int errorCode = databaseError.getCode();
-
-                // Get the error message
                 String errorMessage = databaseError.getMessage();
-
-                // Get the location of the error
-
-                // Print or log the error details
                 System.out.println("Error occurred: " + errorMessage);
                 Log.e("Firebase Error", errorMessage);
             }
@@ -185,17 +161,14 @@ public class Profile extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        // Attach the value event listener
         userRef.addValueEventListener(userValueEventListener);
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        // Remove the value event listener
         if (userValueEventListener != null) {
             userRef.removeEventListener(userValueEventListener);
         }
     }
 }
-

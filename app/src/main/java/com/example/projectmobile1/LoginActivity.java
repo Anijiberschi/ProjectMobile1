@@ -20,15 +20,13 @@ public class LoginActivity extends AppCompatActivity {
 
     private EditText email, password;
     private Button login, register;
-    private  FirebaseAuth mAuth;
+    private FirebaseAuth mAuth;
     private FirebaseUser currentUser;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
-
-
 
         mAuth = FirebaseAuth.getInstance();
         currentUser = mAuth.getCurrentUser();
@@ -37,8 +35,6 @@ public class LoginActivity extends AppCompatActivity {
         email = findViewById(R.id.et_emailLoginActivity);
         password = findViewById(R.id.et_passwordLoginActivity);
         login = findViewById(R.id.bt_logginInLoginActivity);
-
-
 
         register.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -55,35 +51,30 @@ public class LoginActivity extends AppCompatActivity {
                 String log_password = password.getText().toString();
 
                 mAuth.signInWithEmailAndPassword(log_email, log_password)
-                        .addOnCompleteListener( new OnCompleteListener<AuthResult>() {
+                        .addOnCompleteListener(new OnCompleteListener<AuthResult>() {
                             @Override
                             public void onComplete(@NonNull Task<AuthResult> task) {
                                 if (task.isSuccessful()) {
                                     // Sign in success, update UI with the signed-in user's information
-                                    Toast.makeText(LoginActivity.this, "Authentication success.",Toast.LENGTH_SHORT).show();
+                                    Toast.makeText(LoginActivity.this, "Authentication success.", Toast.LENGTH_SHORT).show();
                                     FirebaseUser user = mAuth.getCurrentUser();
                                     finish();
                                 } else {
                                     // If sign in fails, display a message to the user.
-                                    Toast.makeText(LoginActivity.this, "Authentication failed.",Toast.LENGTH_SHORT).show();
-
+                                    Toast.makeText(LoginActivity.this, "Authentication failed.", Toast.LENGTH_SHORT).show();
                                 }
                             }
                         });
             }
         });
-
     }
 
     @Override
     public void onStart() {
         super.onStart();
         // Check if user is signed in (non-null) and update UI accordingly.
-
-        if(currentUser != null){
-            Toast.makeText(LoginActivity.this, "You're already connected", Toast.LENGTH_SHORT ).show();
+        if (currentUser != null) {
+            Toast.makeText(LoginActivity.this, "You're already connected", Toast.LENGTH_SHORT).show();
         }
     }
-
-
 }

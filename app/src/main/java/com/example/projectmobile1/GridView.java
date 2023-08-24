@@ -8,9 +8,11 @@ import android.view.View;
 
 public class GridView extends View {
 
-    private int[][] gridColors; // Le tableau des couleurs
+    private int[][] gridColors;
     private int cellSize;
     private Paint paint;
+    private MarkerData marker= new MarkerData();
+
 
     public GridView(Context context) {
         super(context);
@@ -19,24 +21,26 @@ public class GridView extends View {
 
     public void setGridColors(int[][] gridColors) {
         this.gridColors = gridColors;
-        invalidate(); // Redessiner la grille avec les nouvelles couleurs
+        invalidate();
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
+        int sizeSquare = marker.getSizeOfTheSquare();
+        cellSize = getWidth() / sizeSquare;
 
-        cellSize = getWidth() / 5; // Taille de cellule basée sur la largeur de la vue
+        for (int row = 0; row < sizeSquare; row++) {
+            for (int col = 0; col < sizeSquare; col++) {
+                int color = gridColors[row][col] == 0 ? Color.WHITE : Color.BLACK;
+                paint.setColor(color);
 
-        for (int row = 0; row < 5; row++) {
-            for (int col = 0; col < 5; col++) {
-                if (gridColors[row][col] == 0) {
-                    paint.setColor(Color.WHITE);
-                } else {
-                    paint.setColor(Color.BLACK);
-                }
-                canvas.drawRect(col * cellSize, row * cellSize,
-                        (col + 1) * cellSize, (row + 1) * cellSize, paint);
+                float left = col * cellSize;
+                float top = row * cellSize;
+                float right = (col + 1) * cellSize;
+                float bottom = (row + 1) * cellSize;
+
+                canvas.drawRect(left, top, right, bottom, paint);
             }
         }
     }

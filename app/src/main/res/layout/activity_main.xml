@@ -25,7 +25,7 @@
             android:id="@+id/bt_toChat"
             android:layout_width="135dp"
             android:layout_height="match_parent"
-            android:text="Button"
+            android:text="Chat"
             tools:layout_conversion_absoluteHeight="90dp"
             tools:layout_conversion_absoluteWidth="228dp"
             tools:layout_editor_absoluteX="3dp"
